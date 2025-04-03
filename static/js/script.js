@@ -1,12 +1,10 @@
 //static/js/script.js
 // Get the API URL from the current location
-// This avoids hardcoding the URL and makes it work across different environments
 function getApiUrl() {
     const protocol = window.location.protocol;
     const hostname = window.location.hostname;
     const port = window.location.port;
 
-    // If we're at the /ui route, the API is at the root of the same server
     return `${protocol}//${hostname}${port ? ':' + port : ''}`;
 }
 
@@ -47,7 +45,7 @@ document.addEventListener('DOMContentLoaded', function() {
     materialForm.addEventListener('submit', function(e) {
         e.preventDefault();
 
-        // Validate form
+        // Basic validation
         const requesterName = document.getElementById('requesterName').value.trim();
         if (!requesterName) {
             showMessage('กรุณาระบุชื่อผู้เบิก', 'error');
@@ -170,11 +168,9 @@ document.addEventListener('DOMContentLoaded', function() {
         messageDiv.className = `message ${type}`;
         messageDiv.style.display = 'block';
 
-        // Hide message after 5 seconds for success messages
-        if (type === 'success') {
-            setTimeout(() => {
-                messageDiv.style.display = 'none';
-            }, 5000);
-        }
+        // Hide message after 5 seconds
+        setTimeout(() => {
+            messageDiv.style.display = 'none';
+        }, 5000);
     }
 });

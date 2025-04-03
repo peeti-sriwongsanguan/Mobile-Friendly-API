@@ -8,8 +8,9 @@ from flask_cors import CORS
 # Import from database module
 from database import DB_PATH, init_db
 
-# Import routes blueprint
+# Import routes blueprints
 from forms_routes import forms_bp
+from parts_routes import parts_bp
 
 # Load environment variables from .env file
 load_dotenv()
@@ -20,8 +21,18 @@ CORS(app)  # Enable CORS for all routes
 # Initialize database on startup
 init_db()
 
+# Initialize parts database if it doesn't exist
+try:
+    import parts_database
+    if not os.path.exists('auto_parts.db'):
+        parts_database.setup_parts_database()
+        print("Parts database initialized successfully.")
+except Exception as e:
+    print(f"Error initializing parts database: {e}")
+
 # Register blueprints
 app.register_blueprint(forms_bp)
+app.register_blueprint(parts_bp)
 
 @app.route('/', methods=['GET'])
 def index():
@@ -35,18 +46,19 @@ def index():
             {"path": "/items", "methods": ["GET", "POST"], "description": "Get all items or create a new item"},
             {"path": "/items/<id>", "methods": ["GET", "DELETE"], "description": "Get or delete a specific item"},
             {"path": "/forms", "methods": ["GET", "POST"], "description": "Get all forms or create a new form"},
-            {"path": "/forms/<id>", "methods": ["GET", "PUT", "DELETE"], "description": "Get, update or delete a specific form"}
+            {"path": "/forms/<id>", "methods": ["GET", "PUT", "DELETE"], "description": "Get, update or delete a specific form"},
+            {"path": "/parts", "methods": ["GET"], "description": "Get all parts or search for parts"}
         ]
     })
 
 @app.route('/ui', methods=['GET'])
 def ui():
     """Serve the HTML UI for forms"""
-    # Print the current working directory and check if the file exists
-    print(f"Current directory: {os.getcwd()}")
-    print(f"Static folder exists: {os.path.exists('static')}")
-    print(f"Index file exists: {os.path.exists('static/index.html')}")
-    return send_from_directory('static', 'index.html')
+    try:
+        return send_from_directory('static', 'index.html')
+    except Exception as e:
+        print(f"Error serving UI: {e}")
+        return f"Error: Could not find UI files. Make sure static/index.html exists. Error: {e}", 500
 
 @app.route('/items', methods=['GET'])
 def get_items():
@@ -127,7 +139,6 @@ def delete_item(item_id):
 
     conn.close()
     return jsonify({"message": "Item deleted successfully"})
-
 
 if __name__ == '__main__':
     # Get configuration from environment variables
