@@ -10,6 +10,45 @@ function getApiUrl() {
 
 const API_URL = getApiUrl();
 
+// Automotive parts dictionary for auto-suggestions
+const AUTOMOTIVE_PARTS = [
+    { thai: "ขากระจก", english: "Mirror Bracket", code: "MIR1" },
+    { thai: "ไฟหน้า", english: "Headlight", code: "HEA1" },
+    { thai: "ประตู", english: "Door", code: "DOO1" },
+    { thai: "กระจก", english: "Window/Glass", code: "WIN1" },
+    { thai: "ไฟท้าย", english: "Tail Light", code: "TAI1" },
+    { thai: "กระจังหน้า", english: "Front Grille", code: "FRO1" },
+    { thai: "กันชนหน้า", english: "Front Bumper", code: "FRO2" },
+    { thai: "ไฟเลี้ยว", english: "Turn Signal", code: "TUR1" },
+    { thai: "เบ้ามือโด", english: "Door Handle Housing", code: "DOO2" },
+    { thai: "ที่ปัดน้ำฝน", english: "Windshield Wiper", code: "WIN2" },
+    { thai: "แก้มไฟหรือหน้า", english: "Light Panel or Front Cover", code: "LIG1" },
+    { thai: "พลาสติกบังฝุ่นหลัง", english: "Rear Dust Cover (Plastic)", code: "REA1" },
+    { thai: "พลาสติกมุมกันชน", english: "Bumper Corner Plastic", code: "BUM1" },
+    { thai: "พลาสติกปิดมุมกันชน", english: "Bumper Corner Cover", code: "BUM2" },
+    { thai: "ไฟในกันชน", english: "Bumper Light", code: "BUM3" },
+    { thai: "พลาสติกปิดกันชน", english: "Bumper Cover", code: "BUM4" },
+    { thai: "กระป๋องดีดน้ำ", english: "Washer Fluid Container", code: "WAS1" },
+    { thai: "แป้นจ่ายเบรคตรัซ", english: "Brake/Clutch Pedal", code: "BRA1" },
+    { thai: "มือจับแยงหน้า", english: "Front Handle", code: "FRO3" },
+    { thai: "กันสาดประตู", english: "Door Visor/Rain Guard", code: "DOO3" },
+    { thai: "ซองไฟหน้า", english: "Headlight Housing", code: "HEA2" },
+    { thai: "พลาสติกบนไฟเลี้ยว", english: "Plastic Above Turn Signal", code: "PLA1" },
+    { thai: "เพ้องยกกระจกประตู", english: "Window Lifter Cover", code: "WIN3" },
+    { thai: "สักหลาดกระจกประตู", english: "Door Window Felt/Seal", code: "DOO4" },
+    { thai: "ขากันชน", english: "Bumper Bracket", code: "BUM5" },
+    { thai: "ยางกระจกหน้า", english: "Front Windshield Rubber", code: "FRO4" },
+    { thai: "แผงหน้ากระจัง", english: "Front Grille Panel", code: "FRO5" },
+    { thai: "แผ่นรองแผงหน้า", english: "Front Panel Support Plate", code: "FRO6" },
+    { thai: "โล่ไก่", english: "Radiator Shield", code: "RAD1" },
+    { thai: "ไฟเลี้ยวข้างประตู", english: "Door Side Turn Signal", code: "DOO5" },
+    { thai: "ไฟหลังคา", english: "Roof Light", code: "ROO1" },
+    { thai: "มือเปิดประตู", english: "Door Handle", code: "DOO6" },
+    { thai: "บังโคลนหน้า", english: "Front Fender", code: "FRO7" },
+    { thai: "ไฟป้ายทะเบียน", english: "License Plate Light", code: "LIC1" },
+    { thai: "ยางรอบกระจก", english: "Window Rubber Seal", code: "WIN4" }
+];
+
 document.addEventListener('DOMContentLoaded', function() {
     const addRowButton = document.getElementById('addRow');
     const materialsTable = document.getElementById('materialsTable').getElementsByTagName('tbody')[0];
@@ -19,6 +58,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set today's date as default
     document.getElementById('date').valueAsDate = new Date();
 
+    // Initialize datalist for material description suggestions
+    initializePartsSuggestions();
+
     // Add row button click handler
     addRowButton.addEventListener('click', function() {
         const rowCount = materialsTable.rows.length;
@@ -26,7 +68,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         newRow.innerHTML = `
             <td>${rowCount + 1}</td>
-            <td><input type="text" name="materialDesc"></td>
+            <td>
+                <input type="text" name="materialDesc" list="parts-list" autocomplete="off">
+            </td>
             <td><input type="text" name="materialCode"></td>
             <td><input type="number" name="quantity" min="0" step="1" onkeydown="return event.keyCode !== 190 && event.keyCode !== 188"></td>
             <td><input type="text" name="unit"></td>
@@ -34,7 +78,15 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
 
         attachRemoveRowHandler(newRow.querySelector('.remove-row'));
+        attachMaterialDescriptionEvents(newRow.querySelector('input[name="materialDesc"]'));
     });
+
+    // Update existing row to have datalist
+    const firstRow = materialsTable.rows[0];
+    const firstDescInput = firstRow.querySelector('input[name="materialDesc"]');
+    firstDescInput.setAttribute('list', 'parts-list');
+    firstDescInput.setAttribute('autocomplete', 'off');
+    attachMaterialDescriptionEvents(firstDescInput);
 
     // Attach remove row handlers to existing rows
     document.querySelectorAll('.remove-row').forEach(button => {
@@ -137,6 +189,41 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error:', error);
         });
     });
+
+    // Helper function to initialize parts suggestion datalist
+    function initializePartsSuggestions() {
+        // Create datalist element if it doesn't exist
+        if (!document.getElementById('parts-list')) {
+            const datalist = document.createElement('datalist');
+            datalist.id = 'parts-list';
+
+            // Add options from parts dictionary
+            AUTOMOTIVE_PARTS.forEach(part => {
+                const option = document.createElement('option');
+                option.value = part.thai;
+                option.dataset.english = part.english;
+                option.dataset.code = part.code;
+                datalist.appendChild(option);
+            });
+
+            document.body.appendChild(datalist);
+        }
+    }
+
+    // Helper function to attach events to material description input
+    function attachMaterialDescriptionEvents(input) {
+        // Add change/input event to fill in the code
+        input.addEventListener('input', function() {
+            const row = this.closest('tr');
+            const codeInput = row.querySelector('input[name="materialCode"]');
+
+            // Try to find matching part
+            const selectedPart = AUTOMOTIVE_PARTS.find(part => part.thai === this.value);
+            if (selectedPart && codeInput) {
+                codeInput.value = selectedPart.code;
+            }
+        });
+    }
 
     // Helper function to attach remove row handler
     function attachRemoveRowHandler(button) {
